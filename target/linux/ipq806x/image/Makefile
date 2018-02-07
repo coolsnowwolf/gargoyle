@@ -3,6 +3,8 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/image.mk
 
+UBIFS_OPTS = -m 2048 -e 124KiB -c 4096 -U -F
+
 define Device/Default
 	PROFILES := Default
 	KERNEL_DEPENDS = $$(wildcard $(DTS_DIR)/$$(DEVICE_DTS).dts)
@@ -165,6 +167,54 @@ define Device/netgear_r7800
 endef
 TARGET_DEVICES += netgear_r7800
 
+define Build/copy-file
+	cat "$(1)" > "$@"
+endef
+
+define Device/asus_rt-ac58u
+	$(call Device/FitImageLzma)
+	DEVICE_DTS := qcom-ipq4019-rt-ac58u
+	KERNEL_LOADADDR := 0x80208000
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	DTB_SIZE := 65536
+	SUPPORTED_DEVICES += rt-ac58u
+	DEVICE_TITLE := Asus RT-AC58U
+	BOARD_NAME := rt-ac58u
+	IMAGE_SIZE := 20439364
+	FILESYSTEMS := squashfs
+#	Someone - in their infinite wisdom - decided to put the firmware
+#	version in front of the image name \03\00\00\04 => Version 3.0.0.4
+#	Since u-boot works with strings we either need another fixup step
+#	to add a version... or we are very careful not to add '\0' into that
+#	string and call it a day.... Yeah, we do the latter!
+	UIMAGE_NAME:=$(shell echo -e '\03\01\01\01RT-AC58U')
+	IMAGES = sysupgrade.tar flash-factory.trx
+	IMAGE/flash-factory.trx := copy-file $(KDIR)/tmp/$$(KERNEL_INITRAMFS_IMAGE) | uImage none
+	IMAGE/sysupgrade.tar := sysupgrade-tar | append-metadata
+	DEVICE_PACKAGES := kmod-usb-phy-qcom-ipq4019 ipq-wifi-rt-ac58u
+endef
+TARGET_DEVICES += asus_rt-ac58u
+
+define Device/asus_rt-acrh17
+	$(call Device/FitImageLzma)
+	DEVICE_DTS := qcom-ipq4019-rt-acrh17
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	DTB_SIZE := 65536
+	BOARD_NAME := rt-acrh17
+	KERNEL_LOADADDR := 0x80208000
+	DEVICE_TITLE := Asus RT-ACRH17
+	IMAGE_SIZE := 20439364
+	FILESYSTEMS := squashfs
+	UIMAGE_NAME:=$(shell echo -e '\03\01\01\01RT-AC82U')
+	IMAGES = sysupgrade.tar flash-factory.trx
+	IMAGE/flash-factory.trx := copy-file $(KDIR)/tmp/$$(KERNEL_INITRAMFS_IMAGE) | uImage none
+	IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+	DEVICE_PACKAGES := ath10k-firmware-qca4019 ath10k-firmware-qca9984
+endef
+TARGET_DEVICES += asus_rt-acrh17
+
 define Device/openmesh_a42
 	$(call Device/FitImageLzma)
 	DEVICE_DTS := qcom-ipq4019-a42
@@ -288,5 +338,7 @@ define Device/zyxel_nbg6817
 	$(call Device/ZyXELImage)
 endef
 TARGET_DEVICES += zyxel_nbg6817
+
+.NOTPARALLEL:
 
 $(eval $(call BuildImage))
