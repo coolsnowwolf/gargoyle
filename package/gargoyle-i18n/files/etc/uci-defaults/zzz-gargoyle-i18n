@@ -1,0 +1,11 @@
+#!/bin/sh
+
+uci set gargoyle.global.fallback_lang=SimplifiedChinese-ZH-CN
+uci set gargoyle.global.language=SimplifiedChinese-ZH-CN
+uci commit
+
+mv /www/firstboot.i18n.sh /www/firstboot.sh
+
+. /usr/lib/gargoyle/i18nServices.sh
+change_menu_language "SimplifiedChinese-ZH-CN"
+restart_lang_services

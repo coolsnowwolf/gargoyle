@@ -1,0 +1,281 @@
+#!/bin/sh /etc/rc.common
+
+START=56
+MOUNT_TABLE_FILE="/tmp/mounted_usb_storage.tab"
+
+USB_LOCKFILE="/tmp/usb_restart.lock"
+got_lock=0
+
+is_mounted()
+{
+	# Exit with 0 if is mounted somewhere other than /tmp directory, else exit with 1
+	awk -v devpath="$1" '$1 == devpath  && $2 !~ /^\/tmp\// {f=1; exit} END {exit !f}' /proc/mounts
+}
+
+usb_lock()
+{
+	got_lock=0
+	if [ ! -e "$USB_LOCKFILE" ] ; then
+		touch "$USB_LOCKFILE"
+		got_lock=1
+	fi
+	echo "$got_lock"
+}
+
+usb_unlock()
+{
+	rm -rf "$USB_LOCKFILE"
+}
+
+start()
+{
+	got_lock=$(usb_lock)
+	if [ "$got_lock" = "1" ] ; then
+		do_start
+		usb_unlock
+	fi
+}
+
+do_start()
+{
+	local gdisplay=$(uci get gargoyle.display.system_usb_storage 2>/dev/null)
+	if [ -z "$gdisplay" ] ; then
+		local menu_name='USB Storage'
+		[ -x /usr/bin/i18n-menu ] && {
+			local translation=$(i18n-menu gargoyle.scripts.system_usb_storage)
+			[ -n "$translation" ] && menu_name="$translation"
+		}
+		uci set gargoyle.display.system_usb_storage="$menu_name"
+		uci set gargoyle.scripts.system_usb_storage='usb_storage.sh'
+		uci set gargoyle.system.usb_storage='350'
+		uci commit
+	fi
+
+	local drives="$(blkid | grep UUID | sed -r 's#^/dev/(.+):.+UUID="([^"]+)".*$#/dev/\1:\2#g' | grep -v ubi )"
+
+	echo "$drives" >/tmp/drives_found.txt
+	date >>/tmp/drives_found.txt
+
+	for devid in $drives; do
+		local id=$(echo "$devid" | cut -f 2 -d ':')
+		local d=$(echo "$devid" | cut -f 1 -d ':')
+		local did="${d##*/}"
+
+		if [ -z "$id" ] || [ -z "$d" ] || is_mounted "$d"; then
+			continue
+		fi
+
+		rm "/tmp/usb_mount/$did" >/dev/null 2>&1
+
+		local type=$(disktype "$d" | egrep -o "Ext.|FAT..|NTFS|Linux swap|HFS Plus")
+		if [ -e /sbin/mount.exfat ] ; then
+			type=$(disktype "$d" | egrep -o "Ext.|exFAT|FAT..|NTFS|Linux swap|HFS Plus")
+		fi
+
+		local err
+		unset err
+
+		case "${type}" in
+			'FAT32'|'FAT16')
+				mkdir -p "/tmp/usb_mount/$id"
+				chmod 777  "/tmp/usb_mount/$id"
+				umount "/tmp/usb_mount/$id" 2>/dev/null
+				mount -t vfat -o umask=0,dmask=0 "$d" "/tmp/usb_mount/$id" || umount "/tmp/usb_mount/$id" 2>/dev/null
+			;;
+			'NTFS')
+				mkdir -p "/tmp/usb_mount/$id"
+				chmod 777  "/tmp/usb_mount/$id"
+				umount "/tmp/usb_mount/$id" 2>/dev/null
+				ntfs-3g "$d" "/tmp/usb_mount/$id" || umount "/tmp/usb_mount/$id"
+			;;
+			'exFAT')
+				mkdir -p "/tmp/usb_mount/$id"
+				chmod 777  "/tmp/usb_mount/$id"
+				umount "/tmp/usb_mount/$id" 2>/dev/null
+				mount.exfat -o umask=0,dmask=0 "$d" "/tmp/usb_mount/$id" || umount "/tmp/usb_mount/$id" 2>/dev/null
+			;;
+			'Linux swap')
+				swapon "$d" >/dev/null 2>&1
+			;;
+			'Ext4')
+				mkdir -p "/tmp/usb_mount/$id"
+				chmod 777  "/tmp/usb_mount/$id"
+				umount "/tmp/usb_mount/$id" 2>/dev/null
+				mount -t ext4 -o noatime "$d" "/tmp/usb_mount/$id" || umount "/tmp/usb_mount/$id" 2> /dev/null
+			;;
+			'Ext3')
+				mkdir -p "/tmp/usb_mount/$id"
+				chmod 777  "/tmp/usb_mount/$id"
+				umount "/tmp/usb_mount/$id" 2>/dev/null
+				mount -t ext3 -o noatime "$d" "/tmp/usb_mount/$id" || umount "/tmp/usb_mount/$id" 2> /dev/null
+			;;
+			'Ext2')
+				mkdir -p "/tmp/usb_mount/$id"
+				chmod 777  "/tmp/usb_mount/$id"
+				umount "/tmp/usb_mount/$id" 2>/dev/null
+				mount -t ext2 -o noatime "$d" "/tmp/usb_mount/$id" || umount "/tmp/usb_mount/$id" 2> /dev/null
+			;;
+			'HFS Plus')
+				mkdir -p "/tmp/usb_mount/$id"
+				chmod 777  "/tmp/usb_mount/$id"
+				umount "/tmp/usb_mount/$id" 2>/dev/null
+				mount -t hfsplus "$d" "/tmp/usb_mount/$id" || umount "/tmp/usb_mount/$id" 2> /dev/null
+				type="HFS+"
+			;;
+			*)
+				err="unmountable"
+			;;
+		esac
+
+		if [ -z "$err" ] && [ "$type" != "Linux swap" ] ; then
+			local disk_size=$(df  | grep "$d" | awk '{ print $2 }' | head -n 1)
+			local disk_free=$(df  | grep "$d" | awk '{ print $4 }' | head -n 1)
+			if [ -z "$disk_size" ] ; then disk_size="-" ; fi
+			if [ -z "$disk_free" ] ; then disk_size="-" ; fi
+			if [ -n "$disk_size" ] && [ "${disk_size}" != '-' ]; then disk_size=$(($disk_size*1024)) ; fi
+			if [ -n "$disk_free" ] && [ "${disk_free}" != '-' ]; then disk_free=$(($disk_free*1024)) ; fi
+
+			if [ -e "$MOUNT_TABLE_FILE" ] ; then
+				escaped_d=$(echo $d | sed 's/\//\\\//g')
+				sed -i  "/^$escaped_d\t.*$/d"  "$MOUNT_TABLE_FILE"
+			fi
+
+			if [ ! -h  "/tmp/usb_mount/dev_$did" ] ; then
+				ln -s "/tmp/usb_mount/$id" "/tmp/usb_mount/dev_$did"
+			fi
+
+			PART=$(echo ${d##/*/})
+			DRIVE=$(echo ${PART%%[0-9]})
+			if [ -e "/sys/class/block/$DRIVE/device/model" ]; then
+				V=$(cat /sys/class/block/$DRIVE/device/vendor | xargs)
+				P=$(cat /sys/class/block/$DRIVE/device/model | xargs)
+				DRIVE=$(echo "$V $P" | sed 's/ /%20/g')
+			else
+				DRIVE=$d
+			fi
+
+			echo "$d	/tmp/usb_mount/$id	/tmp/usb_mount/dev_$did	$type	$disk_size	$disk_free	$DRIVE"  >> "$MOUNT_TABLE_FILE"
+		fi
+	done
+
+	#update plugin links last, so if this takes a bit of time everything is already mounted and will work
+	plugin_drive=$(uci get gargoyle.plugin_options.root_drive 2>/dev/null)
+	plugin_root=$(uci get gargoyle.plugin_options.root_dir 2>/dev/null)
+	if [ -f "$MOUNT_TABLE_FILE" ] ;  then
+		while read device_path mountpoint_path _; do
+			if [ -n "${plugin_drive}" ] && [ "${plugin_drive}" = "${device_path}" ] ; then
+				echo do_plugin_link "${plugin_drive}" "${plugin_root}" "${mountpoint_path}"
+				
+				do_plugin_link "${plugin_drive}" "${plugin_root}" "${mountpoint_path}"
+			fi
+		done < "$MOUNT_TABLE_FILE"
+	fi
+}
+
+stop()
+{
+	got_lock=$(usb_lock)
+	if [ "$got_lock" = "1" ] ; then
+		do_stop
+		usb_unlock
+	fi
+}
+
+restart()
+{
+	got_lock=$(usb_lock)
+	if [ "$got_lock" = "1" ] ; then
+		do_stop
+		do_start
+		usb_unlock
+	fi
+}
+
+do_swapoff()
+{
+	# Umount swap.
+	# We will care only about /dev/sd*. We will not affect zram users (/dev/zram0 etc).
+	while read swap_device_path _; do
+		case "${swap_device_path}" in
+			'/dev/sd'*)
+				swapoff "${swap_device_path}"
+			;;
+		esac
+	done < /proc/swaps
+}
+
+do_plugin_link()
+{
+	plugin_drive="$1"
+	plugin_root="$2"
+	mountpoint="$3"
+
+	IFS_ORIG="$IFS"
+	IFS_LINEBREAK="$(printf '\n\r')"
+	IFS="$IFS_LINEBREAK"
+
+	if [ -d "${mountpoint}${plugin_root}/usr/lib/opkg/info" ] ; then
+		echo links="\$("cat "${mountpoint}${plugin_root}/usr/lib/opkg/info"/"*".linked ")"
+		links=$(cat "${mountpoint}${plugin_root}/usr/lib/opkg/info"/*.linked 2>/dev/null)
+		echo "links=$links"
+		if [ -n "$links" ] ; then
+			for link in $links ; do
+				echo "testing $link"
+				if [ ! -e "$link" ] ; then
+					echo "linking $link"
+					mkdir -p "$link"
+					rmdir "$link"
+					ln -s "/plugin_root${plugin_dir}${link}" "$link"
+				fi
+			done
+		fi
+	fi
+	IFS="$IFS_ORIG"
+}
+
+do_plugin_unlink()
+{
+	plugin_drive="$1"
+	plugin_root="$2"
+	mountpoint="$3"
+
+	IFS_ORIG="$IFS"
+	IFS_LINEBREAK="$(printf '\n\r')"
+	IFS="$IFS_LINEBREAK"
+
+	if [ -d "${mountpoint}${plugin_root}/usr/lib/opkg/info" ] ; then
+		links=$(cat "${mountpoint}${plugin_root}/usr/lib/opkg/info"/*.linked 2>/dev/null)
+		if [ -n "$links" ] ; then
+			for link in $links ; do
+				if [ -h "$link" ] ; then
+					rm "$link"
+				fi
+			done
+		fi
+	fi
+	IFS="$IFS_ORIG"
+}
+
+do_stop()
+{
+	plugin_drive=$(uci get gargoyle.plugin_options.root_drive 2>/dev/null)
+	plugin_root=$(uci get gargoyle.plugin_options.root_dir 2>/dev/null)
+	if [ -f "$MOUNT_TABLE_FILE" ];  then
+		while read device_path mountpoint_path _; do
+
+			if [ -n "${plugin_drive}" ] && [ "${plugin_drive}" = "${device_path}" ] ; then
+				do_plugin_unlink "${plugin_drive}" "${plugin_root}" "${mountpoint_path}"
+			fi
+
+			# Cleanup mountpoint and symlink.
+			if [ -d "${mountpoint_path}" ] ; then
+				umount "${mountpoint_path}" >/dev/null 2>&1
+				rmdir "${mountpoint_path}"
+			fi
+			rm -rf "/tmp/usb_mount/dev_${device_path##*/}"
+		done < "$MOUNT_TABLE_FILE"
+
+		rm "$MOUNT_TABLE_FILE"
+	fi
+	do_swapoff
+}

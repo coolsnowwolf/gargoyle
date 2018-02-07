@@ -1,0 +1,15 @@
+--- a/misc/Makefile
++++ b/misc/Makefile
+@@ -5,9 +5,9 @@ TARGETS=ss nstat ifstat rtacct lnstat
+ 
+ include ../config.mk
+ 
+-ifeq ($(HAVE_BERKELEY_DB),y)
+-	TARGETS += arpd
+-endif
++#ifeq ($(HAVE_BERKELEY_DB),y)
++#	TARGETS += arpd
++#endif
+ 
+ all: $(TARGETS)
+ 
