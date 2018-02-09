@@ -13,14 +13,14 @@ PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)src.v$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://www.ijg.org/files
-PKG_MD5SUM:=3353992aecaee1805ef4109aadd433e7
+PKG_HASH:=3a753ea48d917945dd54a2d97de388aa06ca2eb1066cbfdc6652036349fe05a7
 
-PKG_MAINTAINER:=Jo-Philipp Wich <jow@openwrt.org>
+PKG_MAINTAINER:=Jo-Philipp Wich <jo@mein.io>
 PKG_LICENSE:=IJG
 PKG_LICENSE_FILES:=README
 
 PKG_BUILD_PARALLEL:=1
-PKG_BUILD_DEPENDS:=libltdl
+PKG_BUILD_DEPENDS:=libtool
 
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/package.mk
@@ -41,6 +41,7 @@ define Package/jpeg-tools
   $(call Package/jpeg/Default)
   SECTION:=utils
   CATEGORY:=Utilities
+  SUBMENU:=Image Manipulation
   DEPENDS:=+libjpeg
   TITLE+= manipulation tools
 endef
