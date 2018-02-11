@@ -1,152 +1,100 @@
-# 
-# Copyright (C) 2007 OpenWrt.org
+#
+# Copyright (C) 2007-2016 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
-# $Id: Makefile 8490 2007-08-25 19:59:22Z olli $
 
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=wget
-PKG_VERSION:=1.11.2
+PKG_VERSION:=1.19.2
 PKG_RELEASE:=2
-
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=@GNU/$(PKG_NAME)
-PKG_MD5SUM:=5d8f534ab4d20d6f92faedfbdb13ef1f
+PKG_HASH:=4f4a673b6d466efa50fbfba796bd84a46ae24e370fa562ede5b21ab53c11a920
+PKG_MAINTAINER:=Peter Wagner <tripolar@gmx.at>
+PKG_LICENSE:=GPL-3.0+
+PKG_LICENSE_FILES:=COPYING
+
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/wget-default/Default
+define Package/wget/Default
   SECTION:=net
   CATEGORY:=Network
+  DEPENDS:=+libpcre +zlib
+  SUBMENU:=File Transfer
   TITLE:=Non-interactive network downloader
   URL:=http://www.gnu.org/software/wget/index.html
 endef
 
-define Package/wget-default/Default/description
-	Wget is a network utility to retrieve files from the Web
-	using http and ftp, the two most widely used Internet
-	protocols. It works non-interactively, so it will work in
-	the background, after having logged off. The program supports
-	recursive retrieval of web-authoring pages as well as ftp
-	sites -- you can use wget to make mirrors of archives and
-	home pages or to travel the Web like a WWW robot.
+define Package/wget/Default/description
+ Wget is a network utility to retrieve files from the Web using http
+ and ftp, the two most widely used Internet protocols. It works
+ non-interactively, so it will work in the background, after having
+ logged off. The program supports recursive retrieval of web-authoring
+ pages as well as ftp sites -- you can use wget to make mirrors of
+ archives and home pages or to travel the Web like a WWW robot.
 endef
 
-define Package/wget-default
-$(call Package/wget-default/Default)
-  DEPENDS+= +libopenssl
+define Package/wget
+$(call Package/wget/Default)
+  DEPENDS+= +libopenssl +librt
   TITLE+= (with SSL support)
+  VARIANT:=ssl
 endef
 
-define Package/wget-default/description
-$(call Package/wget-default/Default/description)
+define Package/wget/description
+$(call Package/wget/Default/description)
  This package is built with SSL support.
 endef
 
 define Package/wget-nossl
-$(call Package/wget-default/Default)
+$(call Package/wget/Default)
   TITLE+= (without SSL support)
+  VARIANT:=nossl
 endef
 
 define Package/wget-nossl/description
-$(call Package/wget-default/Default/description)
+$(call Package/wget/Default/description)
  This package is built without SSL support.
 endef
 
-define Package/wget-matrixssl
-$(call Package/wget-default/Default)
-  DEPENDS+= +libmatrixssl-nothread
-  TITLE+= (with matrixssl support instead of OpenSSL)
-  MAINTAINER:=Eric Bishop <eric@gargoyle-router.com>
-endef
-
-define Package/wget-matrixssl/description
-$(call Package/wget-default/Default/description)
- This package is built with matrixssl support instead of OpenSSL.
-endef 
-
-
-define Build/Template
-
-$(STAMP_BUILT)-$(2): $(STAMP_PREPARED)
-	-$(MAKE) -C $(PKG_BUILD_DIR) clean
-	$(call Build/Configure/Default,$(3))
-	$(MAKE) -C $(PKG_BUILD_DIR)
-	( cd $(PKG_BUILD_DIR)/src; mv -f wget wget-$(2) )
-	touch $$@
-
-$(STAMP_BUILT): $(STAMP_BUILT)-$(2)
-
-define Package/$(1)/install
-	$(INSTALL_DIR) $$(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/wget-$(2) $$(1)/usr/bin/$(1)
-endef
-
-# once package is removed, link to busybox so user can still use 
-# old, bare-bones version provided with busybox
-define Package/$(1)/postrm
-	ln -sf ../../bin/busybox $${IPKG_INSTROOT}/usr/bin/wget 2>/dev/null
-	ls >/dev/null 2>&1
-endef
-
-# If wget is now a symlink, remove it
-# and link to the binary we just installed
-# this way we eliminate package conflicts
-# with busybox when we install
-define Package/$(1)/postinst
-	if [ -h $${IPKG_INSTROOT}/usr/bin/wget ]
-	then 
-		rm $${IPKG_INSTROOT}/usr/bin/wget  2>/dev/null
-		ln -s $${IPKG_INSTROOT}/usr/bin/$(1) $${IPKG_INSTROOT}/usr/bin/wget 2>/dev/null
-	fi
-	
-	ls >/dev/null 2>&1
-endef
-
-
-endef
-
-CONFIGURE_ARGS += \
+CONFIGURE_ARGS+= \
 	--disable-rpath \
-	--disable-debug
+	--disable-iri \
+	--with-included-libunistring \
+	--without-libuuid
 
+CONFIGURE_VARS += \
+	ac_cv_header_uuid_uuid_h=no
 
-ifneq ($(SDK)$(CONFIG_PACKAGE_wget),)
-  define Build/with-ssl
-    $(call Build/Template,wget-default,with-ssl, \
-	--with-ssl \
-	--with-libssl-prefix="$(STAGING_DIR)/usr" \
-    )
-  endef
+ifeq ($(BUILD_VARIANT),ssl)
+	CONFIGURE_ARGS+= \
+		--with-ssl=openssl \
+		--with-libssl-prefix="$(STAGING_DIR)/usr"
 endif
-$(eval $(Build/with-ssl))
 
-ifneq ($(SDK)$(CONFIG_PACKAGE_wget-nossl),)
-  define Build/without-ssl
-    $(call Build/Template,wget-nossl,without-ssl, \
-	--without-ssl \
-    )  
-  endef
+ifeq ($(BUILD_VARIANT),nossl)
+	CONFIGURE_ARGS+= \
+		--disable-ntlm \
+		--without-ssl
 endif
-$(eval $(Build/without-ssl))
 
-ifneq ($(SDK)$(CONFIG_PACKAGE_wget-matrixssl),)
-  define Build/matrix-ssl
-    $(call Build/Template,wget-matrixssl,matrix-ssl, \
-	--with-ssl=matrixssl \
-	--with-libmatrixssl-prefix="$(STAGING_DIR)/usr" \
-    )  
-  endef
-endif
-$(eval $(Build/matrix-ssl))
+define Package/wget/install
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/wget $(1)/usr/bin/wget-ssl
+	ln -sf wget-ssl $(1)/usr/bin/wget
+endef
 
+define Package/wget-nossl/install
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/wget $(1)/usr/bin/wget-nossl
+	ln -sf wget-nossl $(1)/usr/bin/wget
+endef
 
-
-
-$(eval $(call BuildPackage,wget-default))
+$(eval $(call BuildPackage,wget))
 $(eval $(call BuildPackage,wget-nossl))
-$(eval $(call BuildPackage,wget-matrixssl))

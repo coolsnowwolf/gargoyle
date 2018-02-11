@@ -59,7 +59,7 @@ define Package/shadowsocksr-libev-gfwlist
   $(call Package/shadowsocksr-libev/Default)
   TITLE+= (OpenSSL)
   VARIANT:=openssl
-  DEPENDS:=+libopenssl +libpthread +dnsmasq-full +ipset +iptables +wget-default +libpcre
+  DEPENDS:=+libopenssl +libpthread +dnsmasq-full +ipset +iptables +wget +libpcre
 endef
 
 define Package/shadowsocksr-libev-gfwlist-polarssl

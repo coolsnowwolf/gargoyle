@@ -1,4 +1,4 @@
-OFFICIAL_VERSION:=1.11 (Built 20180207-0738 git@cd32736)
+OFFICIAL_VERSION:=1.11
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
