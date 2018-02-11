@@ -1,0 +1,103 @@
+<%#
+ Copyright 2014 Aedan Renner <chipdankly@gmail.com>
+ Copyright 2018 Florian Eckert <fe@dev.tdt.de>
+ Licensed to the public under the GNU General Public License v2.
+-%>
+
+<%+header%>
+
+<ul class="cbi-tabmenu">
+	<li class="cbi-tab"><a href="<%=luci.dispatcher.build_url("admin/status/mwan/overview")%>"><%:Interface%></a></li>
+	<li class="cbi-tab-disabled"><a href="<%=luci.dispatcher.build_url("admin/status/mwan/detail")%>"><%:Detail%></a></li>
+	<li class="cbi-tab-disabled"><a href="<%=luci.dispatcher.build_url("admin/status/mwan/diagnostics")%>"><%:Diagnostics%></a></li>
+	<li class="cbi-tab-disabled"><a href="<%=luci.dispatcher.build_url("admin/status/mwan/troubleshooting")%>"><%:Troubleshooting%></a></li>
+</ul>
+
+<script type="text/javascript" src="<%=resource%>/cbi.js"></script>
+<script type="text/javascript">//<![CDATA[
+	XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "status", "mwan", "interface_status")%>', null,
+		function(x, status)
+		{
+			var statusDiv = document.getElementById('mwan_status_text');
+			if (status.interfaces)
+			{
+				var statusview = '';
+				for ( var iface in status.interfaces)
+				{
+					var state = '';
+					var css = '';
+					switch (status.interfaces[iface].status)
+					{
+						case 'online':
+							state = '<%:Online (tracking active)%>';
+							css = 'wanon';
+							break;
+						case 'notMonitored':
+							state = '<%:Online (tracking off)%>';
+							css = 'wanon';
+							break;
+						case 'offline':
+							state = '<%:Offline%>';
+							css = 'wanoff';
+							break;
+						default:
+							state = '<%:Disabled%>';
+							css = 'wanoff';
+							break;
+					}
+					statusview += String.format(
+						'<span class="%s"><strong>%s</strong><br />%s</span>',
+						css,
+						iface,
+						state
+					);
+				}
+				statusDiv.innerHTML = statusview;
+			}
+			else
+			{
+				statusDiv.innerHTML = '<strong><%:No MWAN interfaces found%></strong>';
+			}
+		}
+	);
+//]]></script>
+
+<div id="mwan_interface_status">
+	<fieldset id="interface_field" class="cbi-section">
+		<legend><%:MWAN status - Interface Live Status%></legend>
+		<div id="mwan_status_text"><img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>" style="vertical-align:middle" /><%:Collecting data...%></div>
+	</fieldset>
+</div>
+
+<style type="text/css">
+  #mwan_status_text {
+	display: table;
+	font-size: 14px;
+	margin: auto;
+	max-width: 1044px;
+	min-width: 246px;
+	width: 100%;
+  }
+  .wanon {
+	background-color: rgb(144, 240, 144);
+  }
+  .wanoff {
+	background-color: rgb(240, 144, 144);
+  }
+  .wanon, .wanoff {
+	border-radius: 60px;
+	box-shadow: 0px 2px 5px -3px;
+	float: left;
+	margin: 8px 3px 0px 3px;
+	min-height: 30px;
+	min-width: 235px;
+	padding: 5px 10px 8px 10px;
+	text-align: center;
+  }
+  #mwan_statuslog_text {
+	padding: 20px;
+	text-align: left;
+  }
+</style>
+
+<%+footer%>
