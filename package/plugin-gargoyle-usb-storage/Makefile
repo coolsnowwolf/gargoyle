@@ -13,7 +13,7 @@ PKG_VERSION:=$(GARGOYLE_VERSION)
 ifeq ($(GARGOYLE_VERSION),)
      PKG_VERSION:=1.0.0
 endif
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
@@ -25,7 +25,7 @@ define Package/plugin-gargoyle-usb-storage
 	CATEGORY:=Administration
 	SUBMENU:=Gargoyle Web Interface
 	TITLE:=USB Storage Support for Gargoyle
-	DEPENDS:=+share-users +samba36-server +nfs-kernel-server +nfs-kernel-server-utils +gargoyle +fdisk +blkid +dosfsck
+	DEPENDS:=+share-users +samba36-server +nfs-kernel-server +nfs-kernel-server-utils +gargoyle +fdisk +blkid +dosfstools
 	DEPENDS+=+libusb-1.0 +chat +kmod-usb-acm +kmod-usb-serial +comgt +comgt-ncm +usb-modeswitch
 	DEPENDS+=+kmod-usb-wdm +kmod-usb-net-qmi-wwan +uqmi +kmod-usb-net-cdc-ncm +kmod-usb-net-huawei-cdc-ncm +kmod-usb-net-cdc-ether +kmod-usb-net-rndis
 	DEPENDS+=+umbim +kmod-usb-net-cdc-mbim
