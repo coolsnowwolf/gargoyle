@@ -29,7 +29,7 @@ include $(INCLUDE_DIR)/nls.mk
 CONFIGURE_ARGS += \
 	--without-udev
 
-define Package/dosfstools
+define Package/dosfstools/Default
   SECTION:=utils
   CATEGORY:=Utilities
   SUBMENU:=Filesystem
@@ -38,24 +38,33 @@ define Package/dosfstools
   URL:=https://github.com/dosfstools
 endef
 
+define Package/dosfsck
+  $(call Package/dosfstools/Default)
+  TITLE:=fsck (fsck.fat) utility from dosfstools
+endef
+
 define Package/dosfstools/description
 	The dosfstools package includes the mkfs.fat and fsck.fat utilities, which respectively make and check MS-DOS FAT filesystems.
 endef
 
+define Package/dosfsck/description
+	Utilities to create and check MS-DOS FAT filesystems.
+	(fsck.vfat and fsck.fat for checking integrity of FAT volumes)
+endef
+
 define Package/dosfstools/install
-<<<<<<< HEAD
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/fatlabel $(1)/usr/sbin/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/fsck.fat $(1)/usr/sbin/
-=======
-	$(INSTALL_DIR) $(1)/lib/functions/fsck
-	$(INSTALL_DATA) ./files/dosfsck.sh $(1)/lib/functions/fsck/
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/fatlabel $(1)/usr/sbin/
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/fsck.fat $(1)/usr/sbin/
-	(cd $(1)/usr/sbin; ln -sf fsck.fat fsck.msdos; ln -sf fsck.fat fsck.vfat; ln -sf fsck.fat dosfsck)
->>>>>>> d3e48dd18bbeeae5a6ecf9fbf88f3ddf67cfc92d
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/mkfs.fat $(1)/usr/sbin/
 endef
 
-$(eval $(call BuildPackage,dosfstools))
+define Package/dosfsck/install
+	$(INSTALL_DIR) $(1)/lib/functions/fsck
+	$(INSTALL_DATA) ./files/dosfsck.sh $(1)/lib/functions/fsck/
+	$(INSTALL_DIR) $(1)/usr/sbin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/fsck.fat $(1)/usr/sbin/
+	(cd $(1)/usr/sbin; ln -sf fsck.fat fsck.msdos; ln -sf fsck.fat fsck.vfat; ln -sf fsck.fat dosfsck)
+endef
+
+$(eval $(call BuildPackage,dosfsck))

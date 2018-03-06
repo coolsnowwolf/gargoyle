@@ -8,11 +8,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=default-settings
 PKG_VERSION:=1.0
-<<<<<<< HEAD
-PKG_RELEASE:=38
-=======
 PKG_RELEASE:=37
->>>>>>> d3e48dd18bbeeae5a6ecf9fbf88f3ddf67cfc92d
 PKG_LICENSE:=GPLv3
 PKG_LICENSE_FILES:=LICENSE
 
@@ -34,7 +30,7 @@ endef
 
 define Build/Prepare
 	$(foreach po,$(wildcard ${CURDIR}/i18n/*.po), \
-		po2lmo  $(po) $(PKG_BUILD_DIR)/$(patsubst %.po,%.lmo,$(notdir $(po)));)
+		po2lmo $(po) $(PKG_BUILD_DIR)/$(patsubst %.po,%.lmo,$(notdir $(po)));)
 endef
 
 define Build/Configure

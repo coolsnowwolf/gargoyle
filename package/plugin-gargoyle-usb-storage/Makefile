@@ -13,7 +13,7 @@ PKG_VERSION:=$(GARGOYLE_VERSION)
 ifeq ($(GARGOYLE_VERSION),)
      PKG_VERSION:=1.0.0
 endif
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
@@ -25,7 +25,7 @@ define Package/plugin-gargoyle-usb-storage
 	CATEGORY:=Administration
 	SUBMENU:=Gargoyle Web Interface
 	TITLE:=USB Storage Support for Gargoyle
-	DEPENDS:=+share-users +samba36-server +nfs-kernel-server +nfs-kernel-server-utils +gargoyle +fdisk +blkid +dosfstools
+	DEPENDS:=+share-users +samba36-server +nfs-kernel-server +nfs-kernel-server-utils +gargoyle +fdisk +blkid +dosfsck
 	DEPENDS+=+libusb-1.0 +chat +kmod-usb-acm +kmod-usb-serial +comgt +comgt-ncm +usb-modeswitch
 	DEPENDS+=+kmod-usb-wdm +kmod-usb-net-qmi-wwan +uqmi +kmod-usb-net-cdc-ncm +kmod-usb-net-huawei-cdc-ncm +kmod-usb-net-cdc-ether +kmod-usb-net-rndis
 	DEPENDS+=+umbim +kmod-usb-net-cdc-mbim
@@ -34,7 +34,7 @@ define Package/plugin-gargoyle-usb-storage
 	DEPENDS+=+nfs-utils +badblocks +kmod-fs-ext4 +kmod-fs-msdos +kmod-fs-vfat +kmod-fs-hfsplus
 	DEPENDS+=+kmod-nls-base +kmod-nls-cp1250 +kmod-nls-cp1251 +kmod-nls-cp437 +kmod-nls-cp775 +kmod-nls-cp850 
 	DEPENDS+=+kmod-nls-cp852 +kmod-nls-cp866 +kmod-nls-iso8859-1 +kmod-nls-iso8859-13 +kmod-nls-iso8859-15 
-	DEPENDS+=+kmod-nls-iso8859-2 +kmod-nls-koi8r +kmod-nls-utf8 +disktype +kmod-fuse +ntfs-3g +kmod-usb-ledtrig-usbport
+	DEPENDS+=+kmod-nls-iso8859-2 +kmod-nls-koi8r +kmod-nls-utf8 +disktype +kmod-fuse +ntfs-3g
 	MAINTAINER:=Eric Bishop
 	PKGARCH:=all
 endef
