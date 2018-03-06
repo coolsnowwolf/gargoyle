@@ -43,9 +43,18 @@ define Package/dosfstools/description
 endef
 
 define Package/dosfstools/install
+<<<<<<< HEAD
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/fatlabel $(1)/usr/sbin/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/fsck.fat $(1)/usr/sbin/
+=======
+	$(INSTALL_DIR) $(1)/lib/functions/fsck
+	$(INSTALL_DATA) ./files/dosfsck.sh $(1)/lib/functions/fsck/
+	$(INSTALL_DIR) $(1)/usr/sbin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/fatlabel $(1)/usr/sbin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/fsck.fat $(1)/usr/sbin/
+	(cd $(1)/usr/sbin; ln -sf fsck.fat fsck.msdos; ln -sf fsck.fat fsck.vfat; ln -sf fsck.fat dosfsck)
+>>>>>>> d3e48dd18bbeeae5a6ecf9fbf88f3ddf67cfc92d
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/mkfs.fat $(1)/usr/sbin/
 endef
 

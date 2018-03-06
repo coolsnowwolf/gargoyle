@@ -13,7 +13,10 @@ PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://security.appspot.com/downloads/
-PKG_MD5SUM:=da119d084bd3f98664636ea05b5bb398
+PKG_HASH:=9d4d2bf6e6e2884852ba4e69e157a2cecd68c5a7635d66a3a8cf8d898c955ef7
+PKG_LICENSE:=GPLv2
+
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -31,10 +34,19 @@ define Package/vsftpd/conffiles
 /etc/vsftpd.conf.template
 endef
 
+ifneq ($(CONFIG_USE_MUSL),)
+  NLSSTRING:=-lcrypt
+else
+  NLSSTRING:=-lcrypt -lnsl
+endif
+
+TARGET_CFLAGS += -D_GNU_SOURCE -include fcntl.h
+
 define Build/Compile
+	$(SED) 's/-lcrypt -lnsl/$(NLSSTRING)/' $(PKG_BUILD_DIR)/Makefile
 	$(MAKE) -C $(PKG_BUILD_DIR) \
 		CC="$(TARGET_CC)" \
-		CFLAGS="$(TARGET_CFLAGS)" \
+		CFLAGS="$(TARGET_CFLAGS) $(TARGET_CPPFLAGS)" \
 		LDFLAGS="$(TARGET_LDFLAGS)" \
 		vsftpd
 endef
