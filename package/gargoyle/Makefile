@@ -31,7 +31,7 @@ define Package/gargoyle
 	SECTION:=admin
 	CATEGORY:=Administration
 	TITLE:=Gargoyle Web Interface
-	DEPENDS:=+uci +libuci +haserl-i18n +uhttpd +libustream-mbedtls +qos-gargoyle +bwmon-gargoyle +ddns-gargoyle +webmon-gargoyle +gargoyle-firewall-util +libericstools +etherwake +gpkg  $(ATH_DEPS) $(BRCM_DEPS) $(LED_DEPS)
+	DEPENDS:=+uci +libuci +haserl-i18n +uhttpd +libustream-mbedtls +qos-gargoyle +bwmon-gargoyle +ddns-gargoyle +webmon-gargoyle +gargoyle-firewall-util +libericstools +etherwake +wireless-tools +kmod-nf-conntrack-netlink +@IPTABLES_CONNLABEL +@IPTABLES_NFTABLES +libmnl +libnetfilter-conntrack +libnftnl +relayd +gpkg  $(ATH_DEPS) $(BRCM_DEPS) $(LED_DEPS)
 	MAINTAINER:=Eric Bishop <eric@gargoyle-router.com>
 endef
 
